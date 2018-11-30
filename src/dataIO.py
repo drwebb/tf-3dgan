@@ -1,4 +1,8 @@
 from __future__ import print_function
+from __future__ import division
+from builtins import map
+from builtins import range
+from past.utils import old_div
 import sys
 import os
 
@@ -25,8 +29,8 @@ def getVF(path):
     header = raw_data[1].split()
     n_vertices = int(header[0])
     n_faces = int(header[1])
-    vertices = np.asarray([map(float,raw_data[i+2].split()) for i in range(n_vertices)])
-    faces = np.asarray([map(int,raw_data[i+2+n_vertices].split()) for i in range(n_faces)]) 
+    vertices = np.asarray([list(map(float,raw_data[i+2].split())) for i in range(n_vertices)])
+    faces = np.asarray([list(map(int,raw_data[i+2+n_vertices].split())) for i in range(n_faces)]) 
     return vertices, faces
 
 def plotFromVF(vertices, faces):
@@ -69,9 +73,9 @@ def plotFromVertices(vertices):
 def getVolumeFromOFF(path, sideLen=32):
     mesh = trimesh.load(path)
     volume = trimesh.voxel.Voxel(mesh, 0.5).raw
-    (x, y, z) = map(float, volume.shape)
+    (x, y, z) = list(map(float, volume.shape))
     volume = nd.zoom(volume.astype(float), 
-                     (sideLen/x, sideLen/y, sideLen/z),
+                     (old_div(sideLen,x), old_div(sideLen,y), old_div(sideLen,z)),
                      order=1, 
                      mode='nearest')
     volume[np.nonzero(volume)] = 1.0

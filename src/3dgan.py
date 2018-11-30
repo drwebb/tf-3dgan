@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+from __future__ import print_function
+from builtins import str
+from builtins import range
 import os
 
 import numpy as np
@@ -162,7 +165,7 @@ def trainGAN():
         volumes = d.getAll(obj=obj, train=True, is_local=True)
         volumes = volumes[...,np.newaxis].astype(np.float) 
 
-        for epoch in tqdm(range(n_epochs)):
+        for epoch in tqdm(list(range(n_epochs))):
             
             idx = np.random.randint(len(volumes), size=batch_size)
             x = volumes[idx]
@@ -182,7 +185,7 @@ def trainGAN():
                 sess.run([optimizer_op_d],feed_dict={z_vector:z, x_vector:x})
                 sess.run([optimizer_op_g],feed_dict={z_vector:z})
                             
-            print "epoch: ",epoch,', d_loss:',discriminator_loss,'g_loss:',generator_loss
+            print("epoch: ",epoch,', d_loss:',discriminator_loss,'g_loss:',generator_loss)
 
             # output generated chairs
             if epoch % 500 == 10:

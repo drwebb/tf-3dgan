@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from builtins import object
 __author__ = "Meet Shah"
 __license__ = "MIT"
 
