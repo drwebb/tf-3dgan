@@ -228,7 +228,7 @@ def trainGAN(is_dummy=False, checkpoint=None):
                 id_ch = np.random.randint(0, batch_size, 4)
                 for i in range(4):
                     if g_objects[id_ch[i]].max() > 0.5:
-    		            d.plotVoxelVisdom(np.squeeze(g_objects[id_ch[i]]>0.5), vis, '_'.join(map(str,[epoch,i])))          
+                        d.plotVoxelVisdom(np.squeeze(g_objects[id_ch[i]]>0.5), vis, '_'.join(map(str,[epoch,i])))
             if epoch % 50 == 10:
                 if not os.path.exists(model_directory):
                     os.makedirs(model_directory)      
