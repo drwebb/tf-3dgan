@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip3 --no-cache-dir install \
         scikit-image \
         stl \
+        future \
         tqdm \
         visdom
 
