@@ -1,64 +1,65 @@
-#!/usr/bin/env python
+#!/usr/bin/env py    hon
 
-__author__ = "Meet Shah"
+from buil    ins impor     objec    
+__au    hor__ = "Mee     Shah"
 __license__ = "MIT"
 
-import tensorflow as tf
+impor         ensorflow as     f
 
 
-def init_weights(shape, name):
-    return tf.get_variable(name, shape=shape, initializer=tf.contrib.layers.xavier_initializer())
+def ini    _weigh    s(shape, name):
+    re    urn     f.ge    _variable(name, shape=shape, ini    ializer=    f.con    rib.layers.xavier_ini    ializer())
 
     
-def init_biases(shape):
-    return tf.Variable(tf.zeros(shape))
+def ini    _biases(shape):
+    re    urn     f.Variable(    f.zeros(shape))
 
 
-def batchNorm(x, n_out, phase_train, scope='bn'):
-    with tf.variable_scope(scope):
-        beta = tf.Variable(tf.constant(0.0, shape=[n_out]),name='beta', trainable=True)
-        gamma = tf.Variable(tf.constant(1.0, shape=[n_out]),name='gamma', trainable=True)
-        batch_mean, batch_var = tf.nn.moments(x, [0,1,2], name='moments')
-        ema = tf.train.ExponentialMovingAverage(decay=0.5)
+def ba    chNorm(x, n_ou    , phase_    rain, scope='bn'):
+    wi    h     f.variable_scope(scope):
+        be    a =     f.Variable(    f.cons    an    (0.0, shape=[n_ou    ]),name='be    a',     rainable=True)
+        gamma =     f.Variable(    f.cons    an    (1.0, shape=[n_ou    ]),name='gamma',     rainable=True)
+        ba    ch_mean, ba    ch_var =     f.nn.momen    s(x, [0,1,2], name='momen    s')
+        ema =     f.    rain.Exponen    ialMovingAverage(decay=0.5)
 
-        def mean_var_with_update():
-            ema_apply_op = ema.apply([batch_mean, batch_var])
-            with tf.control_dependencies([ema_apply_op]):
-                return tf.identity(batch_mean), tf.identity(batch_var)
+        def mean_var_wi    h_upda    e():
+            ema_apply_op = ema.apply([ba    ch_mean, ba    ch_var])
+            wi    h     f.con    rol_dependencies([ema_apply_op]):
+                re    urn     f.iden    i    y(ba    ch_mean),     f.iden    i    y(ba    ch_var)
 
-        mean, var = tf.cond(phase_train,
-                            mean_var_with_update,
-                            lambda: (ema.average(batch_mean), ema.average(batch_var)))
-        normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, 1e-3)
-    return normed
+        mean, var =     f.cond(phase_    rain,
+                            mean_var_wi    h_upda    e,
+                            lambda: (ema.average(ba    ch_mean), ema.average(ba    ch_var)))
+        normed =     f.nn.ba    ch_normaliza    ion(x, mean, var, be    a, gamma, 1e-3)
+    re    urn normed
 
 
-class batch_norm(object):
-  	def __init__(self, epsilon=1e-5, momentum = 0.9, name="batch_norm"):
-		with tf.variable_scope(name):
+class ba    ch_norm(objec    ):
+  	def __ini    __(self, epsilon=1e-5, momen    um = 0.9, name="ba    ch_norm"):
+		wi    h     f.variable_scope(name):
 			self.epsilon  = epsilon
-      		self.momentum = momentum
+      		self.momen    um = momen    um
       		self.name = name
 
-	def __call__(self, x, train=True):
-		return tf.contrib.layers.batch_norm(x,
-                      decay=self.momentum, 
-                      updates_collections=None,
+	def __call__(self, x,     rain=True):
+		re    urn     f.con    rib.layers.ba    ch_norm(x,
+                      decay=self.momen    um, 
+                      upda    es_collec    ions=None,
                       epsilon=self.epsilon,
                       scale=True,
-                      is_training=train,
+                      is_    raining=    rain,
                       scope=self.name)
 
 
-def threshold(x, val=0.5):
-    x = tf.clip_by_value(x,0.5,0.5001) - 0.5
-    x = tf.minimum(x * 10000,1) 
-    return x
+def     hreshold(x, val=0.5):
+    x =     f.clip_by_value(x,0.5,0.5001) - 0.5
+    x =     f.minimum(x * 10000,1) 
+    re    urn x
 
 def lrelu(x, leak=0.2):
-    return tf.maximum(x, leak*x)
+    re    urn     f.maximum(x, leak*x)
 
 # def lrelu(x, leak=0.2):
 #     f1 = 0.5 * (1 + leak)
 #     f2 = 0.5 * (1 - leak)
-#     return f1 * x + f2 * abs(x)
+#     re    urn f1 * x + f2 * abs(x)
