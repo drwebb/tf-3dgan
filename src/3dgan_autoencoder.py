@@ -1,331 +1,328 @@
-#!/usr/bin/env py    hon
-from __fu    ure__ impor     prin    _func    ion
-from buil    ins impor     s    r
-from buil    ins impor     range
-impor     os
-impor     sys
+#!/usr/bin/env python
+import os
+import sys
 
-impor     numpy as np
-impor         ensorflow as     f
-impor     da    aIO as d
+import numpy as np
+import tensorflow as tf
+import dataIO as d
 
-from     qdm impor     *
-from u    ils impor     *
+from tqdm import *
+from utils import *
 
 '''
-Global Parame    ers
+Global Parameters
 '''
 n_epochs   = 10000
 n_ae_epochs= 1000
-ba    ch_size = 50
+batch_size = 50
 g_lr       = 0.0025
 d_lr       = 0.00001
 ae_lr      = 0.0001
-be    a       = 0.5
-d_    hresh   = 0.8 
+beta       = 0.5
+d_thresh   = 0.8 
 z_size     = 200
 leak_value = 0.2
 cube_len   = 64
-obj_ra    io  = 0.5
+obj_ratio  = 0.5
 reg_l2     = 0.001
-gan_in    er  = 50
-ae_in    er   = 50
+gan_inter  = 50
+ae_inter   = 50
 obj        = 'chair' 
 
-    rain_sample_direc    ory = './    rain_sample/'
-model_direc    ory = './models/'
+train_sample_directory = './train_sample/'
+model_directory = './models/'
 is_local = False
 
-weigh    s, biases = {}, {}
+weights, biases = {}, {}
 
-def genera    or(z, ba    ch_size=ba    ch_size, phase_    rain=True, reuse=False):
+def generator(z, batch_size=batch_size, phase_train=True, reuse=False):
 
-    s    rides    = [1,2,2,2,1]
+    strides    = [1,2,2,2,1]
 
-    wi    h     f.variable_scope("gen"):
-        z =     f.reshape(z, (ba    ch_size, 1, 1, 1, z_size))
-        g_1 =     f.nn.conv3d_    ranspose(z, weigh    s['wg1'], (ba    ch_size,4,4,4,512), s    rides=[1,1,1,1,1], padding="VALID")
-        g_1 =     f.nn.bias_add(g_1, biases['bg1'])                                  
-        g_1 =     f.con    rib.layers.ba    ch_norm(g_1, is_    raining=phase_    rain)
-        g_1 =     f.nn.relu(g_1)
+    with tf.variable_scope("gen"):
+        z = tf.reshape(z, (batch_size, 1, 1, 1, z_size))
+        g_1 = tf.nn.conv3d_transpose(z, weights['wg1'], (batch_size,4,4,4,512), strides=[1,1,1,1,1], padding="VALID")
+        g_1 = tf.nn.bias_add(g_1, biases['bg1'])                                  
+        g_1 = tf.contrib.layers.batch_norm(g_1, is_training=phase_train)
+        g_1 = tf.nn.relu(g_1)
 
-        g_2 =     f.nn.conv3d_    ranspose(g_1, weigh    s['wg2'], (ba    ch_size,8,8,8,256), s    rides=s    rides, padding="SAME")
-        g_2 =     f.nn.bias_add(g_2, biases['bg2'])
-        g_2 =     f.con    rib.layers.ba    ch_norm(g_2, is_    raining=phase_    rain)
-        g_2 =     f.nn.relu(g_2)
+        g_2 = tf.nn.conv3d_transpose(g_1, weights['wg2'], (batch_size,8,8,8,256), strides=strides, padding="SAME")
+        g_2 = tf.nn.bias_add(g_2, biases['bg2'])
+        g_2 = tf.contrib.layers.batch_norm(g_2, is_training=phase_train)
+        g_2 = tf.nn.relu(g_2)
 
-        g_3 =     f.nn.conv3d_    ranspose(g_2, weigh    s['wg3'], (ba    ch_size,16,16,16,128), s    rides=s    rides, padding="SAME")
-        g_3 =     f.nn.bias_add(g_3, biases['bg3'])
-        g_3 =     f.con    rib.layers.ba    ch_norm(g_3, is_    raining=phase_    rain)
-        g_3 =     f.nn.relu(g_3)
+        g_3 = tf.nn.conv3d_transpose(g_2, weights['wg3'], (batch_size,16,16,16,128), strides=strides, padding="SAME")
+        g_3 = tf.nn.bias_add(g_3, biases['bg3'])
+        g_3 = tf.contrib.layers.batch_norm(g_3, is_training=phase_train)
+        g_3 = tf.nn.relu(g_3)
 
-        g_4 =     f.nn.conv3d_    ranspose(g_3, weigh    s['wg4'], (ba    ch_size,32,32,32,64), s    rides=s    rides, padding="SAME")
-        g_4 =     f.nn.bias_add(g_4, biases['bg4'])
-        g_4 =     f.con    rib.layers.ba    ch_norm(g_4, is_    raining=phase_    rain)
-        g_4 =     f.nn.relu(g_4)
+        g_4 = tf.nn.conv3d_transpose(g_3, weights['wg4'], (batch_size,32,32,32,64), strides=strides, padding="SAME")
+        g_4 = tf.nn.bias_add(g_4, biases['bg4'])
+        g_4 = tf.contrib.layers.batch_norm(g_4, is_training=phase_train)
+        g_4 = tf.nn.relu(g_4)
         
-        g_5 =     f.nn.conv3d_    ranspose(g_4, weigh    s['wg5'], (ba    ch_size,64,64,64,1), s    rides=s    rides, padding="SAME")
-        g_5 =     f.nn.bias_add(g_5, biases['bg5'])
-        g_5 =     f.nn.sigmoid(g_5)
+        g_5 = tf.nn.conv3d_transpose(g_4, weights['wg5'], (batch_size,64,64,64,1), strides=strides, padding="SAME")
+        g_5 = tf.nn.bias_add(g_5, biases['bg5'])
+        g_5 = tf.nn.sigmoid(g_5)
 
-    prin    (g_1, 'g1')
-    prin    (g_2, 'g2')
-    prin    (g_3, 'g3')
-    prin    (g_4, 'g4')
-    prin    (g_5, 'g5')
+    print g_1, 'g1'
+    print g_2, 'g2'
+    print g_3, 'g3'
+    print g_4, 'g4'
+    print g_5, 'g5'
     
-    re    urn g_5
+    return g_5
 
-def encoder(inpu    s, phase_    rain=True, reuse=False):
+def encoder(inputs, phase_train=True, reuse=False):
 
-    s    rides    = [1,2,2,2,1]
-    wi    h     f.variable_scope("dis"):
-        d_1 =     f.nn.conv3d(inpu    s, weigh    s['wd1'], s    rides=s    rides, padding="SAME")
-        d_1 =     f.nn.bias_add(d_1, biases['bd1'])
-        d_1 =     f.con    rib.layers.ba    ch_norm(d_1, is_    raining=phase_    rain)                               
+    strides    = [1,2,2,2,1]
+    with tf.variable_scope("dis"):
+        d_1 = tf.nn.conv3d(inputs, weights['wd1'], strides=strides, padding="SAME")
+        d_1 = tf.nn.bias_add(d_1, biases['bd1'])
+        d_1 = tf.contrib.layers.batch_norm(d_1, is_training=phase_train)                               
         d_1 = lrelu(d_1, leak_value)
 
-        d_2 =     f.nn.conv3d(d_1, weigh    s['wd2'], s    rides=s    rides, padding="SAME") 
-        d_2 =     f.nn.bias_add(d_2, biases['bd2'])
-        d_2 =     f.con    rib.layers.ba    ch_norm(d_2, is_    raining=phase_    rain)
+        d_2 = tf.nn.conv3d(d_1, weights['wd2'], strides=strides, padding="SAME") 
+        d_2 = tf.nn.bias_add(d_2, biases['bd2'])
+        d_2 = tf.contrib.layers.batch_norm(d_2, is_training=phase_train)
         d_2 = lrelu(d_2, leak_value)
         
-        d_3 =     f.nn.conv3d(d_2, weigh    s['wd3'], s    rides=s    rides, padding="SAME")  
-        d_3 =     f.nn.bias_add(d_3, biases['bd3'])
-        d_3 =     f.con    rib.layers.ba    ch_norm(d_3, is_    raining=phase_    rain)
+        d_3 = tf.nn.conv3d(d_2, weights['wd3'], strides=strides, padding="SAME")  
+        d_3 = tf.nn.bias_add(d_3, biases['bd3'])
+        d_3 = tf.contrib.layers.batch_norm(d_3, is_training=phase_train)
         d_3 = lrelu(d_3, leak_value) 
 
-        d_4 =     f.nn.conv3d(d_3, weigh    s['wd4'], s    rides=s    rides, padding="SAME")     
-        d_4 =     f.nn.bias_add(d_4, biases['bd4'])
-        d_4 =     f.con    rib.layers.ba    ch_norm(d_4, is_    raining=phase_    rain)
+        d_4 = tf.nn.conv3d(d_3, weights['wd4'], strides=strides, padding="SAME")     
+        d_4 = tf.nn.bias_add(d_4, biases['bd4'])
+        d_4 = tf.contrib.layers.batch_norm(d_4, is_training=phase_train)
         d_4 = lrelu(d_4)
 
-        d_5 =     f.nn.conv3d(d_4, weigh    s['wae_d'], s    rides=[1,1,1,1,1], padding="VALID")     
-        d_5 =     f.nn.bias_add(d_5, biases['bae_d'])
-        d_5 =     f.nn.sigmoid(d_5)
+        d_5 = tf.nn.conv3d(d_4, weights['wae_d'], strides=[1,1,1,1,1], padding="VALID")     
+        d_5 = tf.nn.bias_add(d_5, biases['bae_d'])
+        d_5 = tf.nn.sigmoid(d_5)
 
-    prin    (d_5, 'ae5')
+    print d_5, 'ae5'
 
-    re    urn d_5
+    return d_5
 
-def discrimina    or(inpu    s, phase_    rain=True, reuse=False):
+def discriminator(inputs, phase_train=True, reuse=False):
 
-    s    rides    = [1,2,2,2,1]
-    wi    h     f.variable_scope("dis", reuse=True):
-        d_1 =     f.nn.conv3d(inpu    s, weigh    s['wd1'], s    rides=s    rides, padding="SAME")
-        d_1 =     f.nn.bias_add(d_1, biases['bd1'])
-        d_1 =     f.con    rib.layers.ba    ch_norm(d_1, is_    raining=phase_    rain)                               
+    strides    = [1,2,2,2,1]
+    with tf.variable_scope("dis", reuse=True):
+        d_1 = tf.nn.conv3d(inputs, weights['wd1'], strides=strides, padding="SAME")
+        d_1 = tf.nn.bias_add(d_1, biases['bd1'])
+        d_1 = tf.contrib.layers.batch_norm(d_1, is_training=phase_train)                               
         d_1 = lrelu(d_1, leak_value)
 
-        d_2 =     f.nn.conv3d(d_1, weigh    s['wd2'], s    rides=s    rides, padding="SAME") 
-        d_2 =     f.nn.bias_add(d_2, biases['bd2'])
-        d_2 =     f.con    rib.layers.ba    ch_norm(d_2, is_    raining=phase_    rain)
+        d_2 = tf.nn.conv3d(d_1, weights['wd2'], strides=strides, padding="SAME") 
+        d_2 = tf.nn.bias_add(d_2, biases['bd2'])
+        d_2 = tf.contrib.layers.batch_norm(d_2, is_training=phase_train)
         d_2 = lrelu(d_2, leak_value)
         
-        d_3 =     f.nn.conv3d(d_2, weigh    s['wd3'], s    rides=s    rides, padding="SAME")  
-        d_3 =     f.nn.bias_add(d_3, biases['bd3'])
-        d_3 =     f.con    rib.layers.ba    ch_norm(d_3, is_    raining=phase_    rain)
+        d_3 = tf.nn.conv3d(d_2, weights['wd3'], strides=strides, padding="SAME")  
+        d_3 = tf.nn.bias_add(d_3, biases['bd3'])
+        d_3 = tf.contrib.layers.batch_norm(d_3, is_training=phase_train)
         d_3 = lrelu(d_3, leak_value) 
 
-        d_4 =     f.nn.conv3d(d_3, weigh    s['wd4'], s    rides=s    rides, padding="SAME")     
-        d_4 =     f.nn.bias_add(d_4, biases['bd4'])
-        d_4 =     f.con    rib.layers.ba    ch_norm(d_4, is_    raining=phase_    rain)
+        d_4 = tf.nn.conv3d(d_3, weights['wd4'], strides=strides, padding="SAME")     
+        d_4 = tf.nn.bias_add(d_4, biases['bd4'])
+        d_4 = tf.contrib.layers.batch_norm(d_4, is_training=phase_train)
         d_4 = lrelu(d_4)
 
-        d_5 =     f.nn.conv3d(d_4, weigh    s['wd5'], s    rides=[1,1,1,1,1], padding="VALID")     
-        d_5 =     f.nn.bias_add(d_5, biases['bd5'])
-        d_5 =     f.con    rib.layers.ba    ch_norm(d_5, is_    raining=phase_    rain)
-        d_5 =     f.nn.sigmoid(d_5)
+        d_5 = tf.nn.conv3d(d_4, weights['wd5'], strides=[1,1,1,1,1], padding="VALID")     
+        d_5 = tf.nn.bias_add(d_5, biases['bd5'])
+        d_5 = tf.contrib.layers.batch_norm(d_5, is_training=phase_train)
+        d_5 = tf.nn.sigmoid(d_5)
 
-    prin    (d_1, 'd1')
-    prin    (d_2, 'd2')
-    prin    (d_3, 'd3')
-    prin    (d_4, 'd4')
-    prin    (d_5, 'd5')
+    print d_1, 'd1'
+    print d_2, 'd2'
+    print d_3, 'd3'
+    print d_4, 'd4'
+    print d_5, 'd5'
 
-    re    urn d_5
+    return d_5
 
-def ini    ialiseWeigh    s():
+def initialiseWeights():
 
-    global weigh    s
-    xavier_ini     =     f.con    rib.layers.xavier_ini    ializer()
+    global weights
+    xavier_init = tf.contrib.layers.xavier_initializer()
 
-    weigh    s['wg1'] =     f.ge    _variable("wg1", shape=[4, 4, 4, 512, 200], ini    ializer=xavier_ini    )
-    weigh    s['wg2'] =     f.ge    _variable("wg2", shape=[4, 4, 4, 256, 512], ini    ializer=xavier_ini    )
-    weigh    s['wg3'] =     f.ge    _variable("wg3", shape=[4, 4, 4, 128, 256], ini    ializer=xavier_ini    )
-    weigh    s['wg4'] =     f.ge    _variable("wg4", shape=[4, 4, 4, 64, 128], ini    ializer=xavier_ini    )
-    weigh    s['wg5'] =     f.ge    _variable("wg5", shape=[4, 4, 4, 1, 64], ini    ializer=xavier_ini    )    
+    weights['wg1'] = tf.get_variable("wg1", shape=[4, 4, 4, 512, 200], initializer=xavier_init)
+    weights['wg2'] = tf.get_variable("wg2", shape=[4, 4, 4, 256, 512], initializer=xavier_init)
+    weights['wg3'] = tf.get_variable("wg3", shape=[4, 4, 4, 128, 256], initializer=xavier_init)
+    weights['wg4'] = tf.get_variable("wg4", shape=[4, 4, 4, 64, 128], initializer=xavier_init)
+    weights['wg5'] = tf.get_variable("wg5", shape=[4, 4, 4, 1, 64], initializer=xavier_init)    
 
-    weigh    s['wd1'] =     f.ge    _variable("wd1", shape=[4, 4, 4, 1, 64], ini    ializer=xavier_ini    )
-    weigh    s['wd2'] =     f.ge    _variable("wd2", shape=[4, 4, 4, 64, 128], ini    ializer=xavier_ini    )
-    weigh    s['wd3'] =     f.ge    _variable("wd3", shape=[4, 4, 4, 128, 256], ini    ializer=xavier_ini    )
-    weigh    s['wd4'] =     f.ge    _variable("wd4", shape=[4, 4, 4, 256, 512], ini    ializer=xavier_ini    )    
-    weigh    s['wd5'] =     f.ge    _variable("wd5", shape=[4, 4, 4, 512, 1], ini    ializer=xavier_ini    )    
+    weights['wd1'] = tf.get_variable("wd1", shape=[4, 4, 4, 1, 64], initializer=xavier_init)
+    weights['wd2'] = tf.get_variable("wd2", shape=[4, 4, 4, 64, 128], initializer=xavier_init)
+    weights['wd3'] = tf.get_variable("wd3", shape=[4, 4, 4, 128, 256], initializer=xavier_init)
+    weights['wd4'] = tf.get_variable("wd4", shape=[4, 4, 4, 256, 512], initializer=xavier_init)    
+    weights['wd5'] = tf.get_variable("wd5", shape=[4, 4, 4, 512, 1], initializer=xavier_init)    
 
-    re    urn weigh    s
+    return weights
 
-def ini    ialiseBiases():
+def initialiseBiases():
     
     global biases
-    zero_ini     =     f.zeros_ini    ializer()
+    zero_init = tf.zeros_initializer()
 
-    biases['bg1'] =     f.ge    _variable("bg1", shape=[512], ini    ializer=zero_ini    )
-    biases['bg2'] =     f.ge    _variable("bg2", shape=[256], ini    ializer=zero_ini    )
-    biases['bg3'] =     f.ge    _variable("bg3", shape=[128], ini    ializer=zero_ini    )
-    biases['bg4'] =     f.ge    _variable("bg4", shape=[64], ini    ializer=zero_ini    )
-    biases['bg5'] =     f.ge    _variable("bg5", shape=[1], ini    ializer=zero_ini    )
+    biases['bg1'] = tf.get_variable("bg1", shape=[512], initializer=zero_init)
+    biases['bg2'] = tf.get_variable("bg2", shape=[256], initializer=zero_init)
+    biases['bg3'] = tf.get_variable("bg3", shape=[128], initializer=zero_init)
+    biases['bg4'] = tf.get_variable("bg4", shape=[64], initializer=zero_init)
+    biases['bg5'] = tf.get_variable("bg5", shape=[1], initializer=zero_init)
 
-    biases['bd1'] =     f.ge    _variable("bd1", shape=[64], ini    ializer=zero_ini    )
-    biases['bd2'] =     f.ge    _variable("bd2", shape=[128], ini    ializer=zero_ini    )
-    biases['bd3'] =     f.ge    _variable("bd3", shape=[256], ini    ializer=zero_ini    )
-    biases['bd4'] =     f.ge    _variable("bd4", shape=[512], ini    ializer=zero_ini    )    
-    biases['bd5'] =     f.ge    _variable("bd5", shape=[1], ini    ializer=zero_ini    ) 
+    biases['bd1'] = tf.get_variable("bd1", shape=[64], initializer=zero_init)
+    biases['bd2'] = tf.get_variable("bd2", shape=[128], initializer=zero_init)
+    biases['bd3'] = tf.get_variable("bd3", shape=[256], initializer=zero_init)
+    biases['bd4'] = tf.get_variable("bd4", shape=[512], initializer=zero_init)    
+    biases['bd5'] = tf.get_variable("bd5", shape=[1], initializer=zero_init) 
 
-    re    urn biases
+    return biases
 
-def     rainGAN(is_dummy=False, exp_id=None):
+def trainGAN(is_dummy=False, exp_id=None):
 
-    weigh    s, biases =  ini    ialiseWeigh    s(), ini    ialiseBiases()
-    x_vec    or =     f.placeholder(shape=[ba    ch_size,cube_len,cube_len,cube_len,1],d    ype=    f.floa    32) 
-    z_vec    or =     f.placeholder(shape=[ba    ch_size,z_size],d    ype=    f.floa    32) 
+    weights, biases =  initialiseWeights(), initialiseBiases()
+    x_vector = tf.placeholder(shape=[batch_size,cube_len,cube_len,cube_len,1],dtype=tf.float32) 
+    z_vector = tf.placeholder(shape=[batch_size,z_size],dtype=tf.float32) 
 
-    # Weigh    s for au    oencoder pre    raining
-    xavier_ini     =     f.con    rib.layers.xavier_ini    ializer()
-    zero_ini     =     f.zeros_ini    ializer()
-    weigh    s['wae_d'] =     f.ge    _variable("wae_d", shape=[4, 4, 4, 512, 200], ini    ializer=xavier_ini    )
-    biases['bae_d'] =      f.ge    _variable("bae_d", shape=[200], ini    ializer=zero_ini    )
+    # Weights for autoencoder pretraining
+    xavier_init = tf.contrib.layers.xavier_initializer()
+    zero_init = tf.zeros_initializer()
+    weights['wae_d'] = tf.get_variable("wae_d", shape=[4, 4, 4, 512, 200], initializer=xavier_init)
+    biases['bae_d'] =  tf.get_variable("bae_d", shape=[200], initializer=zero_init)
 
-    encoded = encoder(x_vec    or, phase_    rain=True, reuse=False)
-    encoded =     f.maximum(    f.minimum(encoded, 0.99), 0.01)
-    decoded = genera    or(encoded, phase_    rain=True, reuse=False) 
+    encoded = encoder(x_vector, phase_train=True, reuse=False)
+    encoded = tf.maximum(tf.minimum(encoded, 0.99), 0.01)
+    decoded = generator(encoded, phase_train=True, reuse=False) 
 
-    decoded_    es     = genera    or(    f.maximum(    f.minimum(encoder(x_vec    or, phase_    rain=False, reuse=False), 0.99), 0.01), phase_    rain=False, reuse=False)
+    decoded_test = generator(tf.maximum(tf.minimum(encoder(x_vector, phase_train=False, reuse=False), 0.99), 0.01), phase_train=False, reuse=False)
 
-    # Round decoder ou    pu    
-    decoded =     hreshold(decoded)
-    # Compu    e MSE Loss and L2 Loss
-    mse_loss =     f.reduce_mean(    f.pow(x_vec    or - decoded, 2))
-    para_ae = [var for var in     f.    rainable_variables() if any(x in var.name for x in ['wg', 'wd', 'wae'])]
-    for var in     f.    rainable_variables():
+    # Round decoder output
+    decoded = threshold(decoded)
+    # Compute MSE Loss and L2 Loss
+    mse_loss = tf.reduce_mean(tf.pow(x_vector - decoded, 2))
+    para_ae = [var for var in tf.trainable_variables() if any(x in var.name for x in ['wg', 'wd', 'wae'])]
+    for var in tf.trainable_variables():
         if 'wd5' in var.name:
-            las    _layer_dis = var
-    para_ae.remove(las    _layer_dis)
-    # l2_loss =     f.add_n([    f.nn.l2_loss(v) for v in para_ae])
+            last_layer_dis = var
+    para_ae.remove(last_layer_dis)
+    # l2_loss = tf.add_n([tf.nn.l2_loss(v) for v in para_ae])
     # ae_loss = mse_loss + reg_l2 * l2_loss
     ae_loss = mse_loss     
 
-    op    imizer_ae =     f.    rain.AdamOp    imizer(learning_ra    e=ae_lr,be    a1=be    a, name="Adam_AE").minimize(ae_loss)
-    # op    imizer_ae =     f.    rain.RMSPropOp    imizer(learning_ra    e=ae_lr, name="RMS_AE").minimize(ae_loss)
+    optimizer_ae = tf.train.AdamOptimizer(learning_rate=ae_lr,beta1=beta, name="Adam_AE").minimize(ae_loss)
+    # optimizer_ae = tf.train.RMSPropOptimizer(learning_rate=ae_lr, name="RMS_AE").minimize(ae_loss)
 
 
-    ne    _g_    rain = genera    or(z_vec    or, phase_    rain=True, reuse=False) 
+    net_g_train = generator(z_vector, phase_train=True, reuse=False) 
 
-    d_ou    pu    _x = discrimina    or(x_vec    or, phase_    rain=True, reuse=False)
-    d_ou    pu    _x =     f.maximum(    f.minimum(d_ou    pu    _x, 0.99), 0.01)
-    summary_d_x_his     =     f.summary.his    ogram("d_prob_x", d_ou    pu    _x)
+    d_output_x = discriminator(x_vector, phase_train=True, reuse=False)
+    d_output_x = tf.maximum(tf.minimum(d_output_x, 0.99), 0.01)
+    summary_d_x_hist = tf.summary.histogram("d_prob_x", d_output_x)
 
-    d_ou    pu    _z = discrimina    or(ne    _g_    rain, phase_    rain=True, reuse=True)
-    d_ou    pu    _z =     f.maximum(    f.minimum(d_ou    pu    _z, 0.99), 0.01)
-    summary_d_z_his     =     f.summary.his    ogram("d_prob_z", d_ou    pu    _z)
+    d_output_z = discriminator(net_g_train, phase_train=True, reuse=True)
+    d_output_z = tf.maximum(tf.minimum(d_output_z, 0.99), 0.01)
+    summary_d_z_hist = tf.summary.histogram("d_prob_z", d_output_z)
 
-    # Compu    e     he discrimina    or accuracy
-    n_p_x =     f.reduce_sum(    f.cas    (d_ou    pu    _x > 0.5,     f.in    32))
-    n_p_z =     f.reduce_sum(    f.cas    (d_ou    pu    _z <= 0.5,     f.in    32))
-    d_acc =     f.divide(n_p_x + n_p_z, 2 * ba    ch_size)
+    # Compute the discriminator accuracy
+    n_p_x = tf.reduce_sum(tf.cast(d_output_x > 0.5, tf.int32))
+    n_p_z = tf.reduce_sum(tf.cast(d_output_z <= 0.5, tf.int32))
+    d_acc = tf.divide(n_p_x + n_p_z, 2 * batch_size)
 
-    # Compu    e     he discrimina    or and genera    or loss
-    d_loss = -    f.reduce_mean(    f.log(d_ou    pu    _x) +     f.log(1-d_ou    pu    _z))
-    g_loss = -    f.reduce_mean(    f.log(d_ou    pu    _z))
+    # Compute the discriminator and generator loss
+    d_loss = -tf.reduce_mean(tf.log(d_output_x) + tf.log(1-d_output_z))
+    g_loss = -tf.reduce_mean(tf.log(d_output_z))
     
-    summary_d_loss =     f.summary.scalar("d_loss", d_loss)
-    summary_g_loss =     f.summary.scalar("g_loss", g_loss)
-    summary_n_p_z =     f.summary.scalar("n_p_z", n_p_z)
-    summary_n_p_x =     f.summary.scalar("n_p_x", n_p_x)
-    summary_d_acc =     f.summary.scalar("d_acc", d_acc)
+    summary_d_loss = tf.summary.scalar("d_loss", d_loss)
+    summary_g_loss = tf.summary.scalar("g_loss", g_loss)
+    summary_n_p_z = tf.summary.scalar("n_p_z", n_p_z)
+    summary_n_p_x = tf.summary.scalar("n_p_x", n_p_x)
+    summary_d_acc = tf.summary.scalar("d_acc", d_acc)
 
-    ne    _g_    es     = genera    or(z_vec    or, phase_    rain=False, reuse=True)
+    net_g_test = generator(z_vector, phase_train=False, reuse=True)
 
-    para_g = [var for var in     f.    rainable_variables() if any(x in var.name for x in ['wg', 'bg', 'gen'])]
-    para_d = [var for var in     f.    rainable_variables() if any(x in var.name for x in ['wd', 'bd', 'dis'])]
+    para_g = [var for var in tf.trainable_variables() if any(x in var.name for x in ['wg', 'bg', 'gen'])]
+    para_d = [var for var in tf.trainable_variables() if any(x in var.name for x in ['wd', 'bd', 'dis'])]
 
-    # only upda    e     he weigh    s for     he discrimina    or ne    work
-    op    imizer_op_d =     f.    rain.AdamOp    imizer(learning_ra    e=d_lr,be    a1=be    a).minimize(d_loss,var_lis    =para_d)
-    # only upda    e     he weigh    s for     he genera    or ne    work
-    op    imizer_op_g =     f.    rain.AdamOp    imizer(learning_ra    e=g_lr,be    a1=be    a).minimize(g_loss,var_lis    =para_g)
+    # only update the weights for the discriminator network
+    optimizer_op_d = tf.train.AdamOptimizer(learning_rate=d_lr,beta1=beta).minimize(d_loss,var_list=para_d)
+    # only update the weights for the generator network
+    optimizer_op_g = tf.train.AdamOptimizer(learning_rate=g_lr,beta1=beta).minimize(g_loss,var_list=para_g)
 
-    saver =     f.    rain.Saver(max_    o_keep=50) 
+    saver = tf.train.Saver(max_to_keep=50) 
 
-    wi    h     f.Session() as sess:  
+    with tf.Session() as sess:  
       
-        sess.run(    f.global_variables_ini    ializer())        
-        z_sample = np.random.normal(0, 0.33, size=[ba    ch_size, z_size]).as    ype(np.floa    32)
+        sess.run(tf.global_variables_initializer())        
+        z_sample = np.random.normal(0, 0.33, size=[batch_size, z_size]).astype(np.float32)
         if is_dummy:
-            volumes = np.random.randin    (0,2,(ba    ch_size,cube_len,cube_len,cube_len))
-            prin    ('Using Dummy Da    a')
+            volumes = np.random.randint(0,2,(batch_size,cube_len,cube_len,cube_len))
+            print 'Using Dummy Data'
         else:
-            volumes = d.ge    All(obj=obj,     rain=True, is_local=is_local, obj_ra    io=obj_ra    io)
-            prin    ('Using ' + obj + ' Da    a')
-        volumes = volumes[...,np.newaxis].as    ype(np.floa    ) 
+            volumes = d.getAll(obj=obj, train=True, is_local=is_local, obj_ratio=obj_ratio)
+            print 'Using ' + obj + ' Data'
+        volumes = volumes[...,np.newaxis].astype(np.float) 
 
         for epoch in range(n_ae_epochs):
-            idx = np.random.randin    (len(volumes), size=ba    ch_size)
+            idx = np.random.randint(len(volumes), size=batch_size)
             x = volumes[idx]
 
-            # Au    oencoder pre    raining
-            # ae_l, mse_l, l2_l, _ = sess.run([ae_loss, mse_loss, l2_loss, op    imizer_ae],feed_dic    ={x_vec    or:x})
-            # prin     'Au    oencoder Training ', "epoch: ",epoch, 'ae_loss:', ae_l, 'mse_loss:', mse_l, 'l2_loss:', l2_l
+            # Autoencoder pretraining
+            # ae_l, mse_l, l2_l, _ = sess.run([ae_loss, mse_loss, l2_loss, optimizer_ae],feed_dict={x_vector:x})
+            # print 'Autoencoder Training ', "epoch: ",epoch, 'ae_loss:', ae_l, 'mse_loss:', mse_l, 'l2_loss:', l2_l
 
-            ae_l, mse_l, _ = sess.run([ae_loss, mse_loss, op    imizer_ae],feed_dic    ={x_vec    or:x})
-            prin    ('Au    oencoder Training ', "epoch: ",epoch, 'ae_loss:', ae_l, 'mse_loss:', mse_l)
+            ae_l, mse_l, _ = sess.run([ae_loss, mse_loss, optimizer_ae],feed_dict={x_vector:x})
+            print 'Autoencoder Training ', "epoch: ",epoch, 'ae_loss:', ae_l, 'mse_loss:', mse_l
 
-            # ou    pu     genera    ed chairs
-            if epoch % ae_in    er == 10:
-                idx = np.random.randin    (len(volumes), size=ba    ch_size)
+            # output generated chairs
+            if epoch % ae_inter == 10:
+                idx = np.random.randint(len(volumes), size=batch_size)
                 x = volumes[idx]
-                decoded_chairs = sess.run(decoded_    es    , feed_dic    ={x_vec    or:x})
-                if no     os.pa    h.exis    s(    rain_sample_direc    ory):
-                    os.makedirs(    rain_sample_direc    ory)
-                decoded_chairs.dump(    rain_sample_direc    ory+'/ae_' + exp_id +s    r(epoch))
+                decoded_chairs = sess.run(decoded_test, feed_dict={x_vector:x})
+                if not os.path.exists(train_sample_directory):
+                    os.makedirs(train_sample_directory)
+                decoded_chairs.dump(train_sample_directory+'/ae_' + exp_id +str(epoch))
 
         for epoch in range(n_epochs):
             
-            idx = np.random.randin    (len(volumes), size=ba    ch_size)
+            idx = np.random.randint(len(volumes), size=batch_size)
             x = volumes[idx]
-            z = np.random.normal(0, 0.33, size=[ba    ch_size, z_size]).as    ype(np.floa    32)
+            z = np.random.normal(0, 0.33, size=[batch_size, z_size]).astype(np.float32)
 
-            # Upda    e     he discrimina    or and genera    or
-            d_summary_merge =     f.summary.merge([summary_d_loss,
-                                                summary_d_x_his    , 
-                                                summary_d_z_his    ,
+            # Update the discriminator and generator
+            d_summary_merge = tf.summary.merge([summary_d_loss,
+                                                summary_d_x_hist, 
+                                                summary_d_z_hist,
                                                 summary_n_p_x,
                                                 summary_n_p_z,
                                                 summary_d_acc])
 
-            summary_d, discrimina    or_loss = sess.run([d_summary_merge,d_loss],feed_dic    ={z_vec    or:z, x_vec    or:x})
-            summary_g, genera    or_loss = sess.run([summary_g_loss,g_loss],feed_dic    ={z_vec    or:z})  
-            d_accuracy, n_x, n_z = sess.run([d_acc, n_p_x, n_p_z],feed_dic    ={z_vec    or:z, x_vec    or:x})
-            prin    (n_x, n_z)
+            summary_d, discriminator_loss = sess.run([d_summary_merge,d_loss],feed_dict={z_vector:z, x_vector:x})
+            summary_g, generator_loss = sess.run([summary_g_loss,g_loss],feed_dict={z_vector:z})  
+            d_accuracy, n_x, n_z = sess.run([d_acc, n_p_x, n_p_z],feed_dict={z_vector:z, x_vector:x})
+            print n_x, n_z
 
-            if d_accuracy < d_    hresh:
-                sess.run([op    imizer_op_d],feed_dic    ={z_vec    or:z, x_vec    or:x})
-                prin    ('Discrimina    or Training ', "epoch: ",epoch,', d_loss:',discrimina    or_loss,'g_loss:',genera    or_loss, "d_acc: ", d_accuracy)
+            if d_accuracy < d_thresh:
+                sess.run([optimizer_op_d],feed_dict={z_vector:z, x_vector:x})
+                print 'Discriminator Training ', "epoch: ",epoch,', d_loss:',discriminator_loss,'g_loss:',generator_loss, "d_acc: ", d_accuracy
 
-            sess.run([op    imizer_op_g],feed_dic    ={z_vec    or:z})
-            prin    ('Genera    or Training ', "epoch: ",epoch,', d_loss:',discrimina    or_loss,'g_loss:',genera    or_loss, "d_acc: ", d_accuracy)
+            sess.run([optimizer_op_g],feed_dict={z_vector:z})
+            print 'Generator Training ', "epoch: ",epoch,', d_loss:',discriminator_loss,'g_loss:',generator_loss, "d_acc: ", d_accuracy
 
-            # ou    pu     genera    ed chairs
-            if epoch % gan_in    er == 10:
-                g_chairs = sess.run(ne    _g_    es    ,feed_dic    ={z_vec    or:z_sample})
-                if no     os.pa    h.exis    s(    rain_sample_direc    ory):
-                    os.makedirs(    rain_sample_direc    ory)
-                g_chairs.dump(    rain_sample_direc    ory+'/'+s    r(epoch))
+            # output generated chairs
+            if epoch % gan_inter == 10:
+                g_chairs = sess.run(net_g_test,feed_dict={z_vector:z_sample})
+                if not os.path.exists(train_sample_directory):
+                    os.makedirs(train_sample_directory)
+                g_chairs.dump(train_sample_directory+'/'+str(epoch))
             
-            if epoch % gan_in    er == 10:
-                if no     os.pa    h.exis    s(model_direc    ory):
-                    os.makedirs(model_direc    ory)      
-                saver.save(sess, save_pa    h = model_direc    ory + '/' + s    r(epoch) + '.cp    k')
+            if epoch % gan_inter == 10:
+                if not os.path.exists(model_directory):
+                    os.makedirs(model_directory)      
+                saver.save(sess, save_path = model_directory + '/' + str(epoch) + '.cptk')
 
 if __name__ == '__main__':
-    is_dummy = bool(in    (sys.argv[1]))
+    is_dummy = bool(int(sys.argv[1]))
     exp_id = sys.argv[2]
-        rainGAN(is_dummy=is_dummy, exp_id=exp_id)
+    trainGAN(is_dummy=is_dummy, exp_id=exp_id)
