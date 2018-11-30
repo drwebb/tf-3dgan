@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import os
 
@@ -14,10 +15,10 @@ try:
     from stl import mesh
 except:
     pass
-    print 'All dependencies not loaded, some functionality may not work'
+    print('All dependencies not loaded, some functionality may not work')
 
-LOCAL_PATH = '/home/meetshah1995/datasets/ModelNet/3DShapeNets/volumetric_data/'
-SERVER_PATH = '/home/gpu_users/meetshah/3dgan/volumetric_data/'
+LOCAL_PATH = os.environ.get('SHAPE_PATH_LOCAL')
+SERVER_PATH = os.environ.get('SHAPE_PATH_SERVER')
 
 def getVF(path):
     raw_data = tuple(open(path, 'r'))
